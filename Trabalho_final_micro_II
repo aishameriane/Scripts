@@ -1,0 +1,403 @@
+# A tabela abaixo mostra os preços de reserva de três consumidores para duas mercadorias.
+# Supondo que o custo marginal de produção seja igual a zero para ambas mercadorias,
+# de que forma o produtor deve combinar os produtos (venda avulsa, pacote puro ou pacote misto) de forma a maximizar seu lucro?
+
+
+# Total de produtos
+n<-menu(c('2'), title='Produtos', graphics= TRUE)
+if (n == 1) {
+  n <- 2
+}
+
+# Total de consumidores
+cons<-menu(c('2','3','4'), title='Consumidores', graphics= TRUE)
+
+if (cons == 1) {
+  cons <- 2
+} else if (cons == 2) {
+  cons<-3
+} else if (cons==3) {
+  cons<-4
+}
+
+# Criando matriz de preços (com nxcons entradas)
+Precos<-matrix(NA,nrow=cons,ncol=n)
+
+# Informações sobre os preços de reserva
+
+for (i in 1:cons){
+  for(j in 1:n){
+    cat('\n','Digite o preço de reserva do consumidor ', i, 'para o produto ', j, ': ')
+    t<- readline(prompt=" ")
+    Precos[i,j]<-as.numeric(t)
+  }
+}
+
+Precos
+
+# Criando vetor de custos
+C<-matrix(NA, nrow=1, ncol=n)
+
+# Informações sobre os custos
+for(i in 1:n){
+  cat('\n','Digite o custo do produto ', i, ': ')
+  t<- readline(prompt=" ")
+  C[i]<-as.numeric(t)
+}
+
+
+#### Venda Avulsa
+
+# Vetor de combinação de preços - Venda avulsa
+P_va<-matrix(NA,nrow=cons^n,ncol=n)
+
+
+# Populando o vetor de combinação de preços - dado um preço fixo, combinar com os outro
+for (i in 1:cons) {
+  for (j in 1:cons) {
+    P_va[cons*(i-1)+j,1]<-Precos[i,1]
+    P_va[cons*(i-1)+j,2]<-Precos[j,2]
+  }
+}
+
+# Vetor de decisão de compra
+DC_va<-matrix(NA,nrow=cons^n,ncol=n*cons)
+
+# Determinação de quem irá comprar a cada combinação de preços
+
+for (j in 1:cons) {
+  for (i in 1:nrow(P_va)) {
+    for (k in 1:n) {
+      ifelse(P_va[i,k] > Precos[j,k], DC_va[i,k+n*(j-1)] <- 0, DC_va[i,k+n*(j-1)] <- 1)
+    }  
+  }
+}
+
+# Matriz de receitas
+R_va<-matrix(NA,nrow=cons^n,ncol=n+1)
+
+# Determinação da receita por combinação de preços
+for (j in 1:n) {
+  for (i in 1:nrow(P_va)) {
+    soma<-0
+    for (k in 1:cons) {
+      soma<-soma+DC_va[i,j+n*(k-1)]
+    }
+    R_va[i,j]<-P_va[i,j]*soma
+  }
+}
+
+
+for (i in 1:nrow(R_va)) {
+  R_va[i,n+1]<-rowSums(R_va[,1:n])[i]
+}
+
+# Matriz de custo
+Custo_va<-matrix(NA,nrow=cons^n,ncol=n+1)
+
+# Determinação da receita por combinação de preços
+
+for (j in 1:n) {
+  for (i in 1:nrow(P_va)) {
+    soma<-0
+    for (k in 1:cons) {
+      soma<-soma+DC_va[i,j+n*(k-1)]
+    }
+    Custo_va[i,j]<-C[j]*soma
+  }
+}
+
+
+for (i in 1:nrow(R_va)) {
+  Custo_va[i,n+1]<-rowSums(Custo_va[,1:n])[i]
+}
+
+# Matriz de lucro
+Lucro_va<-matrix(NA, nrow=cons^n, ncol=1)
+
+# Cálculo do lucro: receita - custo
+for (i in 1:nrow(Lucro_va)) {
+  Lucro_va[i,1]<-R_va[i,ncol(R_va)]-Custo_va[i,ncol(Custo_va)]
+}
+
+
+# Encontrando o Lucro Máximo
+max(Lucro_va)
+which.max(Lucro_va)
+
+DC_va[which.max(Lucro_va),]
+
+# Determinando quem compra o pacote ao lucro máximo dado
+
+quem_compra_va<-DC_va[which.max(Lucro_va),]
+
+quem_compra_va
+
+for (j in 1:n) {
+  for (i in 1:cons) {
+    if (quem_compra_va[j+n*(i-1)]==1){
+      quem_compra_va[j+n*(i-1)]<-i 
+    }  else if (quem_compra_va[j+n*(i-1)]==0) {
+      quem_compra_va[j+n*(i-1)]<-''
+   }  
+  }
+}
+
+cat('\n\n\n', '###### VENDA AVULSA ######')
+cat('\n','A combinação de preços que maximiza o lucro do vendedor na venda avulsa é:','\n')
+for (i in 1:n) {
+cat('\n','R$', P_va[which.max(Lucro),i], ' para o produto ', i)
+}
+cat('\n\n','A receita total é R$',R_va[which.max(Lucro_va),n+1],'\n')
+cat('\n', 'O lucro total é R$', max(Lucro_va),'\n')
+for (i in 1:n) {
+  cat('\n', 'Os consumidores que compram o produto ',i, 'são: ')
+    for (j in 1:cons){
+      cat(quem_compra_va[i+(j-1)*n],' ')
+    }
+}
+
+
+### Venda de Pacote Puro
+
+
+# Criação da matriz de preços (haverão tantos pacotes quanto consumidores)
+P_pp<-matrix(NA,nrow=cons,ncol=1)
+
+# Populando a matriz de preços de venda a partir da matriz de preços reserva
+for (i in 1:cons) {
+  P_pp[i,1]<-rowSums(Precos[,1:2])[i]
+}
+
+# Cálculo do custo do cada pacote
+C_pp<-rowSums(C)
+
+# Calculando os preços de reserva de pacote de cada consumidor (sera igual à anterior)
+PReserva_pp<-matrix(NA,nrow=cons,ncol=1)
+
+for (i in 1:cons) {
+  PReserva_pp[i,1]<-rowSums(Precos[,1:2])[i]
+}
+
+# Vetor de decisão de compra
+DC_pp<-matrix(NA,nrow=cons,ncol=cons)
+DC_pp
+
+# Determinação de quem irá comprar a cada combinação de preços
+for (j in 1:cons) {
+  for (i in 1:cons) {
+      ifelse(P_pp[j,1] > P_pp[i,1], DC_pp[j,i] <- 0, DC_pp[j,i] <- 1)
+  }
+}
+
+DC_pp
+
+# Cálculo da Receita total
+R_pp<-matrix(NA,nrow=cons,ncol=1)
+
+for (i in 1:cons){
+  R_pp[i,]<-rowSums(DC_pp[,1:cons])[i]*P_pp[i,1]
+}
+
+# Cálculo do Custo Total
+Custo_pp<-matrix(NA,nrow=cons,ncol=1)
+
+for (i in 1:cons){
+  Custo_pp[i,1]<-rowSums(DC_pp[,1:cons])[i]*C_pp
+}
+
+# Cálculo do Lucro
+Lucro_pp<-matrix(NA,nrow=cons,ncol=1)
+
+for (i in 1:cons){
+  Lucro_pp[i,1]<-R_pp[i,1]-Custo_pp[i,1]
+}
+
+# Determinação do Lucro Máximo
+max(Lucro_pp)
+which.max(Lucro_pp)
+
+DC_pp[which.max(Lucro_pp),]
+
+# Determinando quem compra o pacote ao lucro máximo dado
+
+quem_compra_pp<-DC_pp[which.max(Lucro_pp),]
+
+for (j in 1:cons) {
+    if (quem_compra_pp[j]==1){
+      quem_compra_pp[j]<-j 
+    
+      }  else if (quem_compra_pp[j]==0) {
+      quem_compra_pp[j]<-''
+  }
+}
+
+
+cat('\n\n\n', '###### PACOTE PURO ###### ')
+cat('\n\n','O preço do pacote puro que maximiza o lucro da empresa é:','\n')
+cat('\n','R$', P_pp[which.max(Lucro_pp),1])
+cat('\n\n','A receita total é R$',R_pp[which.max(Lucro_pp),1],'\n')
+cat('\n', 'O lucro total é R$', max(Lucro_pp),'\n')
+cat('\n', 'Os consumidores que compram o pacote são: ')
+  for (j in 1:cons){
+    cat(quem_compra_pp[j],' ')
+  }
+
+
+
+#### Pacote MISTO
+
+# Montando a matriz de combinações de preços
+
+for (i in 1:cons) {
+  assign(sprintf('P_pm%d', i), cbind(P_va,P_pp[i,1]))
+}
+
+if (cons == 2) {
+  P_pm<-rbind(P_pm1, P_pm2)
+} else if (cons == 3) {
+  P_pm<-rbind(P_pm1, P_pm2, P_pm3)
+} else if (cons == 4) {
+  P_pm<-rbind(P_pm1, P_pm2, P_pm3, P_pm4)
+}
+
+# Montando a decisão de compra
+
+PReserva_pm<-cbind(Precos,P_pp)
+PReserva_pm
+
+Precos
+
+DC_pm<-matrix(NA,nrow=nrow(P_pm),ncol=cons)
+
+DC_pm
+
+## LEGENDA
+
+# 0 = Não compra nada
+# 1 = Compra apenas produto 1
+# 2 = Compra apenas produto 2
+# 3 = Compra os dois produtos
+# 4 = Compra o pacote
+
+for (i in 1:cons){
+  for (j in 1:nrow(P_pm)) {
+    if ((P_pm[j,3] <= PReserva_pm[i,3]) &  (P_pm[j,1]+P_pm[j,2] >= P_pm[j,3])){
+      DC_pm[j,i]<-4
+    }   else if ((P_pm[j,1] <= PReserva_pm[i,1]) & (P_pm[j,2] <= PReserva_pm[i,2])) {
+        DC_pm[j,i]<-3
+    } else if (P_pm[j,1] <= PReserva_pm[i,1]) {
+      DC_pm[j,i]<-1
+    }
+    else if (P_pm[j,2] <= PReserva_pm[i,2]) {
+      DC_pm[j,i]<-2
+    }
+    else {DC_pm[j,i]<-0}
+  }
+}
+
+
+# Calculando a Receita
+
+Receita_pm<-matrix(0, ncol = 1, nrow = nrow(P_pm))
+
+for (i in 1:nrow(P_pm)) {
+  for (j in 1:cons) {
+    if (DC_pm[i,j] == 1) {
+      Receita_pm[i,1]<-Receita_pm[i,1]+P_pm[i,1]
+    } else if (DC_pm[i,j] == 2){
+      Receita_pm[i,1]<-Receita_pm[i,1]+P_pm[i,2]
+    }  else if (DC_pm[i,j] == 3){
+      Receita_pm[i,1]<-Receita_pm[i,1]+P_pm[i,1]+P_pm[i,2]
+    } else if (DC_pm[i,j] == 4) {
+      Receita_pm[i,1]<-Receita_pm[i,1]+P_pm[i,3]
+    }
+  }
+ }
+
+
+# Calculando o Custo
+
+C_pm<-cbind(C,(C[1]+C[2]))
+
+C_pm
+
+Custo_pm<-matrix(0, ncol = 1, nrow = nrow(P_pm))
+
+for (i in 1:nrow(P_pm)) {
+  for (j in 1:cons) {
+    if (DC_pm[i,j] == 1) {
+      Custo_pm[i,1]<-Custo_pm[i,1]+C_pm[1,1]
+    } else if (DC_pm[i,j] == 2){
+      Custo_pm[i,1]<-Custo_pm[i,1]+C_pm[1,2]
+    }  else if (DC_pm[i,j] == 3){
+      Custo_pm[i,1]<-Custo_pm[i,1]+C_pm[1,3]
+    } else if (DC_pm[i,j] == 4) {
+      Custo_pm[i,1]<-Custo_pm[i,1]+C_pm[1,3]
+    }
+  }
+}
+
+Custo_pm
+
+# Calculando o Lucro
+
+Lucro_pm<-matrix(0, ncol = 1, nrow = nrow(P_pm))
+
+for (i in 1:nrow(P_pm)) {
+  Lucro_pm[i,1]<-Receita_pm[i,1]-Custo_pm[i,1]
+}
+
+# Determinação do Lucro Máximo
+max(Lucro_pm)
+which.max(Lucro_pm)
+
+DC_pm[which.max(Lucro_pm),]
+
+# Determinando quem compra o pacote ao lucro máximo dado
+quem_compra_pm<-matrix('',nrow=cons, ncol=n+1)
+
+for (j in 1:cons) {
+  if (DC_pm[which.max(Lucro_pm),j] == 1){
+   quem_compra_pm[j,1]<-j
+  } else if (DC_pm[which.max(Lucro_pm),j] == 2) {
+    quem_compra_pm[j,2]<-j
+  } else if (DC_pm[which.max(Lucro_pm),j] == 3) {
+    quem_compra_pm[j,1]<-j
+    quem_compra_pm[j,2]<-j
+  } else if (DC_pm[which.max(Lucro_pm),j] == 4) {
+    quem_compra_pm[j,3]<-j
+  }
+}
+
+quem_compra_pm
+
+
+cat('\n\n\n', '###### PACOTE MISTO ######')
+cat('\n\n', 'O lucro máximo é R$',max(Lucro_pm),'.')
+cat('\n', 'Os preços de maximiza o lucro é: ')
+cat('\n','R$', P_pm[which.max(Lucro_pm),1], ' para o produto 1;')
+cat('\n','R$', P_pm[which.max(Lucro_pm),2], ' para o produto 2;')
+cat('\n','R$', P_pm[which.max(Lucro_pm),3], ' para o pacote.')
+
+for (i in 1:n) {
+  cat('\n', 'Os consumidores que compram o produto ',i, 'são: ')
+  for (j in 1:cons){
+    cat(quem_compra_pm[j,i],' ')
+  }
+}
+cat('\n','Os consumidores que compram o pacote são: ')
+for (j in 1:cons){
+  cat(quem_compra_pm[j,3],' ')
+}
+
+
+
+cat('\n\n\n\n\n\n\n\n\n\n\n\n','A opção que maximiza o lucro da firma é a de venda ')
+if ((max(Lucro_va) > max(Lucro_pm)) &  (max(Lucro_va) > max(Lucro_pp))) {
+  cat('avulsa dos produtos, com lucro de R$',max(Lucro_va))
+} else if ((max(Lucro_pm) > max(Lucro_va)) &  (max(Lucro_pm) > max(Lucro_pp))) {
+  cat('de pacote misto, com lucro de R$',max(Lucro_pm))
+} else if ((max(Lucro_pp) > max(Lucro_va)) &  (max(Lucro_pp) > max(Lucro_pm))) {
+  cat('de pacote puro, com lucro de R$',max(Lucro_pp))
+}
