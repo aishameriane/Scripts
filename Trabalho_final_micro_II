@@ -146,7 +146,7 @@ for (j in 1:n) {
 cat('\n\n\n', '###### VENDA AVULSA ######')
 cat('\n','A combinação de preços que maximiza o lucro do vendedor na venda avulsa é:','\n')
 for (i in 1:n) {
-cat('\n','R$', P_va[which.max(Lucro),i], ' para o produto ', i)
+cat('\n','R$', P_va[which.max(Lucro_va),i], ' para o produto ', i)
 }
 cat('\n\n','A receita total é R$',R_va[which.max(Lucro_va),n+1],'\n')
 cat('\n', 'O lucro total é R$', max(Lucro_va),'\n')
